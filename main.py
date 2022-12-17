@@ -15,6 +15,7 @@ while True:
     try:
         ret, frame = capture.read()
         eyeInFrame = frame[55:500, 1000:1500]  # Cut the eye out from the rest of the frame
+        rows, columns, channels = eyeInFrame.shape # This gets us the size of the images coming in by their pixels
         grayEyeInFrame = cv2.cvtColor(eyeInFrame, cv2.COLOR_BGR2GRAY)  # Convert the eye frame to grayscale
         grayEyeInFrame = cv2.GaussianBlur(grayEyeInFrame, (7, 7), 0) # Adding Gaussian blur smoothes the video feed
 
@@ -27,14 +28,20 @@ while True:
             (x, y, w, h) = cv2.boundingRect(contour) # Draw center of contour
             cv2.drawContours(eyeInFrame, [contour], -1, (0, 0, 255), 3) # This function draws an array of contours, specifically in red in this case (0 blue, 0 green, 255 red) and 3 pixels thick
             cv2.rectangle(eyeInFrame, (x, y), (x + w, y + h), (255, 0, 0), 2) # This will draw a rectangle around the center point of the current contour
+            cv2.line(eyeInFrame, (x + int(w / 2), 0), (x + int(w / 2), rows), (0, 255, 0), 2) # This draws a vertical line over the center of the square
+            cv2.line(eyeInFrame, (0, y + int(h / 2)), (columns, y + int(h / 2)), (0, 255, 0), 2) # This draws a horizontal line over the center of the square
             break # We can break out of the contours loop after the first as we are only trying to draw on the largest contour, which is the center of the eye
 
         cv2.imshow("Eye In Frame", thresh)
         cv2.imshow("Eye In Frame w color", eyeInFrame)
         key = cv2.waitKey(30)
     except Exception as e:
-        print('An exception has occurred. If it is a NoneType exception then video may have ended. Exception: ' + str(e))
-        break
+        if ('NoneType' in str(e)) and (frame is None):
+            print('The video has ended')
+            break
+        else:
+            print('An exception has occurred. Exception: ' + str(e))
+            break
     if key == 27:
         break
 

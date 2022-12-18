@@ -3,6 +3,9 @@ import numpy
 import dlib
 from math import hypot
 import datetime
+from KeyboardAndMouseController import mouseController, keyboardController
+
+# Author: Lev Vinokur
 
 # Huge shoutout to Pysource for helping get started with facial recognition, their tutorials are fantastic!
 # https://www.youtube.com/@pysource-com
@@ -29,6 +32,8 @@ detector = dlib.get_frontal_face_detector() # This is dlib's built in face detec
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 capture = cv2.VideoCapture(0) # This will pipe in video from the webcam in index 0 on your computer
 font = cv2.FONT_HERSHEY_PLAIN
+mouse = mouseController()
+keyboard = keyboardController()
 
 # Declare counters:
 leftWinkCounter = 0
@@ -38,7 +43,7 @@ blinkCounter = 0
 while True:
     try:
         ret, frame = capture.read()
-        frame = cv2.flip(frame, 1)
+        frame = cv2.flip(frame, 1) # Convert the frame to a mirror image of the video feed
         grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert the frame to grayscale
 
         faces = detector(grayFrame) # This will detect all faces in a frame and create an array of faces
@@ -54,23 +59,23 @@ while True:
             # y = landmarks.part(43).y
             # cv2.circle(frame, (x, y), 3, (0, 0, 255), 2)
 
-            # The below code will draw a horizontal line across the left eye
+            # Get all landmark points for the left eye
             leftEyeLeftPoint = (landmarks.part(36).x, landmarks.part(36).y)
             leftEyeRightPoint = (landmarks.part(39).x, landmarks.part(39).y)
             leftEyeCenterPointTop = getMidpoint(landmarks.part(37), landmarks.part(38))
             leftEyeCenterPointBottom = getMidpoint(landmarks.part(41), landmarks.part(40))
 
-            # The below code will draw a horizontal line across the right eye
+            # Get all landmark points for the right eye
             rightEyeLeftPoint = (landmarks.part(42).x, landmarks.part(42).y)
             rightEyeRightPoint = (landmarks.part(45).x, landmarks.part(45).y)
             rightEyeCenterPointTop = getMidpoint(landmarks.part(43), landmarks.part(44))
             rightEyeCenterPointBottom = getMidpoint(landmarks.part(47), landmarks.part(46))
 
-            # Draw the horizontal lines:
+            # Draw horizontal lines across both eyes:
             leftEyeHorizontalLine = cv2.line(frame, leftEyeLeftPoint, leftEyeRightPoint, (0, 255, 0), 2) # Left eye
             rightEyeHorizontalLine = cv2.line(frame, rightEyeLeftPoint, rightEyeRightPoint, (0, 255, 0), 2) # Right eye
 
-            # Draw the vertical lines
+            # Draw vertical lines across both eyes
             leftEyeVerticalLine = cv2.line(frame, leftEyeCenterPointTop, leftEyeCenterPointBottom, (0, 255, 0), 2)  # Left eye
             rightEyeVerticalLine = cv2.line(frame, rightEyeCenterPointTop, rightEyeCenterPointBottom, (0, 255, 0), 2)  # Right eye
 
@@ -82,8 +87,10 @@ while True:
             rightEyeVerticalLineLength = hypot((rightEyeCenterPointTop[0] - rightEyeCenterPointBottom[0]), (rightEyeCenterPointTop[1] - rightEyeCenterPointBottom[1]))
 
             # Number is bigger when eye is closed than when it is not
-            print(str(datetime.datetime.now()) + " Left eye: " + str(leftEyeHorizontalLineLength/leftEyeVerticalLineLength))
-            print(str(datetime.datetime.now()) + " Right eye: " + str(rightEyeHorizontalLineLength/rightEyeVerticalLineLength))
+            # print(str(datetime.datetime.now()) + " Left eye: " + str(leftEyeHorizontalLineLength/leftEyeVerticalLineLength))
+            # print(str(datetime.datetime.now()) + " Right eye: " + str(rightEyeHorizontalLineLength/rightEyeVerticalLineLength))
+
+            # Get eye ratios
             leftEyeRatio = (leftEyeHorizontalLineLength/leftEyeVerticalLineLength)
             rightEyeRatio = (rightEyeHorizontalLineLength/rightEyeVerticalLineLength)
 
@@ -92,32 +99,31 @@ while True:
             if (rightEyeRatio > 4.9) and (leftEyeRatio > 4.9):
                 blinkCounter += 1
                 cv2.putText(frame, "BLINK", (50, 150), font, 7, (255, 0, 0))
-                print("BLINK")
                 if blinkCounter == 2:  # This means that both eyes have been closed for 2 frames
-                    print('you blinked for 3 seconds!')
+                    print("LONG BLINK")
             else:
                 blinkCounter = 0
 
             if (leftEyeRatio > 4.9) and (rightEyeRatio < 4.9):
                 leftWinkCounter += 1
                 cv2.putText(frame, "LEFT WINK", (50, 150), font, 7, (255, 0, 0))
-                print("LEFT WINK")
                 if leftWinkCounter == 2: # This means that the left eye has been closed for 2 frames
-                    print('do something for the left eye!')
+                    mouse.mouseLeftClick()
             else:
                 leftWinkCounter = 0
 
             if (rightEyeRatio > 4.9) and (leftEyeRatio < 4.9):
                 rightWinkCounter += 1
                 cv2.putText(frame, "RIGHT WINK", (50, 150), font, 7, (255, 0, 0))
-                print("RIGHT WINK")
                 if rightWinkCounter == 2:  # This means that the right eye has been closed for 2 frames
-                    print('do something for the right eye!')
+                    mouse.mouseRightClick()
             else:
                 rightWinkCounter = 0
 
 
-            # TODO: determine left right up down so on movement
+            # TODO: Gaze detection
+
+
 
         cv2.imshow("Eye In Frame w color", frame)
         key = cv2.waitKey(30)

@@ -1,6 +1,8 @@
 import cv2
 import numpy
 import dlib
+from math import hypot
+import datetime
 
 # Huge shoutout to Pysource for helping get started with facial recognition, their tutorials are fantastic!
 # https://www.youtube.com/@pysource-com
@@ -11,6 +13,7 @@ import dlib
 # https://docs.opencv.org/4.x/d4/d73/tutorial_py_contours_begin.html
 # https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html
 # https://docs.opencv.org/3.4/d2/d42/tutorial_face_landmark_detection_in_an_image.html
+# https://www.geeksforgeeks.org/python-math-function-hypot/
 
 
 # Returns a tuple with the midpoint values of the eye landmarks, then converts to int to get the exact pixel as you cannot have non-whole number pixels
@@ -21,13 +24,21 @@ def getMidpoint(p1, p2):
     return midpointTuple
 
 
+# Declare global variables:
 detector = dlib.get_frontal_face_detector() # This is dlib's built in face detection software
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
 capture = cv2.VideoCapture(0) # This will pipe in video from the webcam in index 0 on your computer
+font = cv2.FONT_HERSHEY_PLAIN
+
+# Declare counters:
+leftWinkCounter = 0
+rightWinkCounter = 0
+blinkCounter = 0
+
 while True:
     try:
         ret, frame = capture.read()
+        frame = cv2.flip(frame, 1)
         grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert the frame to grayscale
 
         faces = detector(grayFrame) # This will detect all faces in a frame and create an array of faces
@@ -44,28 +55,69 @@ while True:
             # cv2.circle(frame, (x, y), 3, (0, 0, 255), 2)
 
             # The below code will draw a horizontal line across the left eye
-            leftPointLeftEye = (landmarks.part(36).x, landmarks.part(36).y)
-            rightPointLeftEye = (landmarks.part(39).x, landmarks.part(39).y)
-            centerPointTopLeftEye = getMidpoint(landmarks.part(37), landmarks.part(38))
-            centerPointBottomLeftEye = getMidpoint(landmarks.part(41), landmarks.part(40))
+            leftEyeLeftPoint = (landmarks.part(36).x, landmarks.part(36).y)
+            leftEyeRightPoint = (landmarks.part(39).x, landmarks.part(39).y)
+            leftEyeCenterPointTop = getMidpoint(landmarks.part(37), landmarks.part(38))
+            leftEyeCenterPointBottom = getMidpoint(landmarks.part(41), landmarks.part(40))
 
             # The below code will draw a horizontal line across the right eye
-            leftPointRightEye = (landmarks.part(42).x, landmarks.part(42).y)
-            rightPointRightEye = (landmarks.part(45).x, landmarks.part(45).y)
-            centerPointTopRightEye = getMidpoint(landmarks.part(43), landmarks.part(44))
-            centerPointBottomRightEye = getMidpoint(landmarks.part(47), landmarks.part(46))
+            rightEyeLeftPoint = (landmarks.part(42).x, landmarks.part(42).y)
+            rightEyeRightPoint = (landmarks.part(45).x, landmarks.part(45).y)
+            rightEyeCenterPointTop = getMidpoint(landmarks.part(43), landmarks.part(44))
+            rightEyeCenterPointBottom = getMidpoint(landmarks.part(47), landmarks.part(46))
 
             # Draw the horizontal lines:
-            cv2.line(frame, leftPointLeftEye, rightPointLeftEye, (0, 255, 0), 2) # Left eye
-            cv2.line(frame, leftPointRightEye, rightPointRightEye, (0, 255, 0), 2) # Right eye
+            leftEyeHorizontalLine = cv2.line(frame, leftEyeLeftPoint, leftEyeRightPoint, (0, 255, 0), 2) # Left eye
+            rightEyeHorizontalLine = cv2.line(frame, rightEyeLeftPoint, rightEyeRightPoint, (0, 255, 0), 2) # Right eye
 
             # Draw the vertical lines
-            cv2.line(frame, centerPointTopLeftEye, centerPointBottomLeftEye, (0, 255, 0), 2)  # Left eye
-            cv2.line(frame, centerPointTopRightEye, centerPointBottomRightEye, (0, 255, 0), 2)  # Right eye
+            leftEyeVerticalLine = cv2.line(frame, leftEyeCenterPointTop, leftEyeCenterPointBottom, (0, 255, 0), 2)  # Left eye
+            rightEyeVerticalLine = cv2.line(frame, rightEyeCenterPointTop, rightEyeCenterPointBottom, (0, 255, 0), 2)  # Right eye
+
+            # Determine if user has blinked by calculating length of vertical lines in eyes and by checking if the users retina has disappeared for a certain amount of frames
+            leftEyeVerticalLineLength = hypot((leftEyeCenterPointTop[0] - leftEyeCenterPointBottom[0]), (leftEyeCenterPointTop[1] - leftEyeCenterPointBottom[1]))
+            leftEyeHorizontalLineLength = hypot((leftEyeLeftPoint[0] - leftEyeRightPoint[0]), (leftEyeLeftPoint[1] - leftEyeRightPoint[1]))
+
+            rightEyeHorizontalLineLength = hypot((rightEyeLeftPoint[0] - rightEyeRightPoint[0]), (rightEyeLeftPoint[1] - rightEyeRightPoint[1]))
+            rightEyeVerticalLineLength = hypot((rightEyeCenterPointTop[0] - rightEyeCenterPointBottom[0]), (rightEyeCenterPointTop[1] - rightEyeCenterPointBottom[1]))
+
+            # Number is bigger when eye is closed than when it is not
+            print(str(datetime.datetime.now()) + " Left eye: " + str(leftEyeHorizontalLineLength/leftEyeVerticalLineLength))
+            print(str(datetime.datetime.now()) + " Right eye: " + str(rightEyeHorizontalLineLength/rightEyeVerticalLineLength))
+            leftEyeRatio = (leftEyeHorizontalLineLength/leftEyeVerticalLineLength)
+            rightEyeRatio = (rightEyeHorizontalLineLength/rightEyeVerticalLineLength)
+
+            # NOTE: We have 12 frames per second
+
+            if (rightEyeRatio > 4.9) and (leftEyeRatio > 4.9):
+                blinkCounter += 1
+                cv2.putText(frame, "BLINK", (50, 150), font, 7, (255, 0, 0))
+                print("BLINK")
+                if blinkCounter == 2:  # This means that both eyes have been closed for 2 frames
+                    print('you blinked for 3 seconds!')
+            else:
+                blinkCounter = 0
+
+            if (leftEyeRatio > 4.9) and (rightEyeRatio < 4.9):
+                leftWinkCounter += 1
+                cv2.putText(frame, "LEFT WINK", (50, 150), font, 7, (255, 0, 0))
+                print("LEFT WINK")
+                if leftWinkCounter == 2: # This means that the left eye has been closed for 2 frames
+                    print('do something for the left eye!')
+            else:
+                leftWinkCounter = 0
+
+            if (rightEyeRatio > 4.9) and (leftEyeRatio < 4.9):
+                rightWinkCounter += 1
+                cv2.putText(frame, "RIGHT WINK", (50, 150), font, 7, (255, 0, 0))
+                print("RIGHT WINK")
+                if rightWinkCounter == 2:  # This means that the right eye has been closed for 2 frames
+                    print('do something for the right eye!')
+            else:
+                rightWinkCounter = 0
 
 
-
-
+            # TODO: determine left right up down so on movement
 
         cv2.imshow("Eye In Frame w color", frame)
         key = cv2.waitKey(30)

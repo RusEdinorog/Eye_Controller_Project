@@ -123,6 +123,79 @@ while True:
 
             # TODO: Gaze detection
 
+            leftEyeMap = numpy.array([(landmarks.part(36).x, landmarks.part(36).y), (landmarks.part(37).x, landmarks.part(37).y), (landmarks.part(38).x, landmarks.part(38).y), (landmarks.part(39).x, landmarks.part(39).y), (landmarks.part(40).x, landmarks.part(40).y), (landmarks.part(41).x, landmarks.part(41).y)], numpy.int32)
+
+            rightEyeMap = numpy.array([(landmarks.part(42).x, landmarks.part(42).y), (landmarks.part(43).x, landmarks.part(43).y), (landmarks.part(44).x, landmarks.part(44).y), (landmarks.part(45).x, landmarks.part(45).y), (landmarks.part(46).x, landmarks.part(46).y), (landmarks.part(47).x, landmarks.part(47).y)], numpy.int32)
+
+            # EXAMPLE CODE DEMONSTRATING THE MATH CONCEPTS NEEDED TO CALCULATE THE CENTER OF A PERSON'S EYE AT ANY GIVEN TIME:
+
+            # https://www.geeksforgeeks.org/finding-quadrant-coordinate-respect-circle/
+            # Python3 Program to find the
+            # quadrant of a given coordinate
+            # w.rt. the centre of a circle
+            import math
+
+
+            # This function returns the
+            # quadrant number
+            # def getQuadrant(X, Y, R, PX, PY):
+            #
+            #     # Coincides with center
+            #     if (PX == X and PY == Y):
+            #         return 0;
+            #
+            #     val = (math.pow((PX - X), 2) +
+            #            math.pow((PY - Y), 2));
+            #
+            #     # Outside circle
+            #     if (val > pow(R, 2)):
+            #         return -1;
+            #
+            #     # 1st quadrant
+            #     if (PX > X and PY >= Y):
+            #         return 1;
+            #
+            #     # 2nd quadrant
+            #     if (PX <= X and PY > Y):
+            #         return 2;
+            #
+            #     # 3rd quadrant
+            #     if (PX < X and PY <= Y):
+            #         return 3;
+            #
+            #     # 4th quadrant
+            #     if (PX >= X and PY < Y):
+            #         return 4;
+            #
+            #
+            # # Driver Code
+            # # Coordinates of centre
+            # X = 0;
+            # Y = 3;
+            #
+            # # Radius of circle
+            # R = 2;
+            #
+            # # Coordinates of the given po
+            # PX = 1;
+            # PY = 4;
+            #
+            # ans = getQuadrant(X, Y, R, PX, PY);
+            # if (ans == -1):
+            #     print("Lies Outside the circle");
+            # elif (ans == 0):
+            #     print("Coincides with centre");
+            # else:
+            #     print(ans, "Quadrant");
+            #
+            # # This code is contributed by mits
+
+            # https: // stackoverflow.com / questions / 66010530 / how - to - find - point - inside - an - ellipse
+
+            # print('leftEyeMap: ')
+            # print(leftEyeMap)
+            # print('rightEyeMap: ')
+            # print(rightEyeMap)
 
 
         cv2.imshow("Eye In Frame w color", frame)

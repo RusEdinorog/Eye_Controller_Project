@@ -1,57 +1,70 @@
 import cv2
 import numpy
+import dlib
 
-# def eyeController(name):
-#     print('Useless!')
+# Huge shoutout to Pysource for helping get started with facial recognition, their tutorials are fantastic!
+# https://www.youtube.com/@pysource-com
 
-
-# if __name__ == '__main__':
-#     eyeController('PyCharm')
-
-
-#capture = cv2.VideoCapture("Eye_Capture_3.mp4") # This line will pull the video feed from the prerecorded video Eye_Capture_3.mp4
-# while True:
-#     try:
-#         ret, frame = capture.read()
-#         eyeInFrame = frame[55:500, 1000:1500]  # Cut the eye out from the rest of the frame
-#         rows, columns, channels = eyeInFrame.shape # This gets us the size of the images coming in by their pixels
-#         grayEyeInFrame = cv2.cvtColor(eyeInFrame, cv2.COLOR_BGR2GRAY)  # Convert the eye frame to grayscale
-#         grayEyeInFrame = cv2.GaussianBlur(grayEyeInFrame, (7, 7), 0) # Adding Gaussian blur smoothes the video feed
-#
-#         _, thresh = cv2.threshold(grayEyeInFrame, 25, 255, cv2.THRESH_BINARY_INV) # This makes only the darkest portion of the video visible, which is the pupil in this case
-#         contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-#         contours = sorted(contours, key=lambda i: cv2.contourArea(i), reverse=True) # This sorts the contours, then calculates their area using the lambda expression with the returned contourArea, then reverses the order that way the largest area contour is first in the list
-#
-#         #In this for loop we can get even more creative and say that if the current contour is a certain amount smaller than some pre-defined amount for a defined period of time, then we can assume that the eye is closed
-#         for contour in contours:
-#             (x, y, w, h) = cv2.boundingRect(contour) # Draw center of contour
-#             cv2.drawContours(eyeInFrame, [contour], -1, (0, 0, 255), 3) # This function draws an array of contours, specifically in red in this case (0 blue, 0 green, 255 red) and 3 pixels thick
-#             cv2.rectangle(eyeInFrame, (x, y), (x + w, y + h), (255, 0, 0), 2) # This will draw a rectangle around the center point of the current contour
-#             cv2.line(eyeInFrame, (x + int(w / 2), 0), (x + int(w / 2), rows), (0, 255, 0), 2) # This draws a vertical line over the center of the square
-#             cv2.line(eyeInFrame, (0, y + int(h / 2)), (columns, y + int(h / 2)), (0, 255, 0), 2) # This draws a horizontal line over the center of the square
-#             break # We can break out of the contours loop after the first as we are only trying to draw on the largest contour, which is the center of the eye
-#
-#         cv2.imshow("Eye In Frame", thresh)
-#         cv2.imshow("Eye In Frame w color", eyeInFrame)
-#         key = cv2.waitKey(30)
-#     except Exception as e:
-#         if ('NoneType' in str(e)) and (frame is None):
-#             print('The video has ended')
-#             break
-#         else:
-#             print('An exception has occurred. Exception: ' + str(e))
-#             break
-#     if key == 27: # This means you have pressed s for stop on the keyboard
-#         break
-#
-# cv2.destroyAllWindows()
+# Other referenced documentation:
+# https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html
+# https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html#gaabe8c836e97159a9193fb0b11ac52cf1
+# https://docs.opencv.org/4.x/d4/d73/tutorial_py_contours_begin.html
+# https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html
+# https://docs.opencv.org/3.4/d2/d42/tutorial_face_landmark_detection_in_an_image.html
 
 
+# Returns a tuple with the midpoint values of the eye landmarks, then converts to int to get the exact pixel as you cannot have non-whole number pixels
+def getMidpoint(p1, p2):
+    xMidpoint = int((p1.x + p2.x) / 2)
+    yMidpoint = int((p1.y + p2.y) / 2)
+    midpointTuple = (xMidpoint, yMidpoint)
+    return midpointTuple
+
+
+detector = dlib.get_frontal_face_detector() # This is dlib's built in face detection software
+predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 capture = cv2.VideoCapture(0) # This will pipe in video from the webcam in index 0 on your computer
 while True:
     try:
         ret, frame = capture.read()
+        grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert the frame to grayscale
+
+        faces = detector(grayFrame) # This will detect all faces in a frame and create an array of faces
+
+        for face in faces: # This loop will draw over my face in a live feed
+            x, y = face.left(), face.top()
+            x1, y1 = face.right(), face.bottom()
+            # cv2.rectangle(frame, (x, y), (x1, y1), (0, 255, 0), 2) # This will draw  a box around the detected face
+
+            landmarks = predictor(grayFrame, face)# Get facial landmarks
+            # The below code will draw a circle on the landmark spot 36
+            # x = landmarks.part(43).x
+            # y = landmarks.part(43).y
+            # cv2.circle(frame, (x, y), 3, (0, 0, 255), 2)
+
+            # The below code will draw a horizontal line across the left eye
+            leftPointLeftEye = (landmarks.part(36).x, landmarks.part(36).y)
+            rightPointLeftEye = (landmarks.part(39).x, landmarks.part(39).y)
+            centerPointTopLeftEye = getMidpoint(landmarks.part(37), landmarks.part(38))
+            centerPointBottomLeftEye = getMidpoint(landmarks.part(41), landmarks.part(40))
+
+            # The below code will draw a horizontal line across the right eye
+            leftPointRightEye = (landmarks.part(42).x, landmarks.part(42).y)
+            rightPointRightEye = (landmarks.part(45).x, landmarks.part(45).y)
+            centerPointTopRightEye = getMidpoint(landmarks.part(43), landmarks.part(44))
+            centerPointBottomRightEye = getMidpoint(landmarks.part(47), landmarks.part(46))
+
+            # Draw the horizontal lines:
+            cv2.line(frame, leftPointLeftEye, rightPointLeftEye, (0, 255, 0), 2) # Left eye
+            cv2.line(frame, leftPointRightEye, rightPointRightEye, (0, 255, 0), 2) # Right eye
+
+            # Draw the vertical lines
+            cv2.line(frame, centerPointTopLeftEye, centerPointBottomLeftEye, (0, 255, 0), 2)  # Left eye
+            cv2.line(frame, centerPointTopRightEye, centerPointBottomRightEye, (0, 255, 0), 2)  # Right eye
+
+
+
 
 
         cv2.imshow("Eye In Frame w color", frame)
@@ -66,4 +79,5 @@ while True:
     if key == 27: # This means you have pressed s for stop on the keyboard
         break
 
+capture.release()
 cv2.destroyAllWindows()
